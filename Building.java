@@ -1,5 +1,5 @@
 public class Building {
-    public static Elevator elevator = new Elevator();
+    public static Elevatorr elevator = new Elevatorr();
 
     public static void main(String[] args) {
         Thread elevatorThread = new Thread(elevator);
