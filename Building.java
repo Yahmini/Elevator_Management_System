@@ -1,7 +1,15 @@
+import java.util.Scanner;
+
 public class Building {
-    public static Elevatorr elevator = new Elevatorr();
+    public static Elevatorr elevator;
 
     public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+        System.out.print("Enter number of floors in the building: ");
+        int maxFloor = scanner.nextInt();
+
+        elevator = new Elevatorr(maxFloor);
+
         Thread elevatorThread = new Thread(elevator);
         elevatorThread.start();
 
@@ -10,3 +18,4 @@ public class Building {
         serverThread.start();
     }
 }
+
