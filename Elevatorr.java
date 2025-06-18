@@ -67,11 +67,12 @@ public class Elevatorr implements Runnable {
             enteredFloors.add(currentFloor);
             pause = true;
         }
-
+        
         if (destinationRequests.contains(currentFloor)) {
             System.out.println("Person dropped off at floor: " + currentFloor);
             destinationRequests.remove(currentFloor);
         }
+
 
         Integer nextUp = findNextAbove();
         Integer nextDown = findNextBelow();
@@ -99,7 +100,7 @@ public class Elevatorr implements Runnable {
                      .min(Integer::compareTo)
                      .orElse(null);
     }
-
+    
     private Integer findNextBelow() {
         return Stream.concat(pickupRequests.stream(), destinationRequests.stream())
                      .filter(f -> f < currentFloor)

@@ -1,0 +1,115 @@
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 0;
+    padding: 0;
+    background: linear-gradient(to bottom, #eef2f3, #81c7f1);
+    min-height: 100vh;
+  }
+  
+  h1 {
+    margin-top: 20px;
+    color: #2c3e50;
+  }
+  
+  #setup {
+    margin-top: 20px;
+    margin-bottom: 10px;
+  }
+  
+  input, button {
+    padding: 6px 10px;
+    font-size: 14px;
+    border: 1px solid #888;
+    border-radius: 4px;
+    margin: 4px;
+  }
+  
+  button {
+    background-color: #3498db;
+    color: white;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+  
+  button:hover {
+    background-color: #2980b9;
+  }
+  
+  #buildingContainer {
+    position: relative;
+    margin-top: 20px;
+    border: 2px solid #2c3e50;
+    width: 300px;
+    background-color: white;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  
+  .floor {
+    height: 60px;
+    display: flex;
+    flex-direction: row;
+    border-top: 1px solid #ccc;
+    background-color: #f1f1f1;
+    position: relative;
+    transition: background-color 0.5s;
+  }
+  
+  .lift-shaft {
+    width: 60px;
+    height: 100%;
+    position: relative;
+    border-right: 1px solid #999;
+  }
+  
+  .floor-controls {
+    flex-grow: 1;
+    padding: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .floor-number {
+    font-weight: bold;
+    color: #333;
+  }
+  
+  .elevator {
+    width: 40px;
+    height: 40px;
+    background-color: rgb(39, 154, 148);
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    border-radius: 6px;
+    box-shadow: 0 0 6px rgba(0,0,0,0.3);
+    transition: all 1s ease-in-out;
+  }
+  
+  .pickup-highlight {
+    background-color: #ffeeba !important;
+  }
+  
+  .drop-highlight {
+    background-color: #d4edda !important;
+  }
+  
+  #destination-box {
+    background-color: #ffffff;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    padding: 10px;
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 10;
+    font-size: 14px;
+  }
+  
+  
