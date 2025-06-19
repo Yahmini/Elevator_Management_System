@@ -16,6 +16,14 @@
   </div>
 
   <div id="buildingContainer"></div>
+  <div id="liftControls">
+    <h3>Lift Controls</h3>
+    <p>Current Floor: <span id="currentFloorDisplay">0</span></p>
+    <label for="directDestination">Destination:</label>
+    <input type="number" id="directDestination" min="0" placeholder="e.g. 2">
+    <button onclick="goToFloor()">Go</button>
+  </div>
+  
 
   <script src="script.js"></script>
 </body>

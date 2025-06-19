@@ -26,22 +26,37 @@ function buildBuilding() {
 
   elevator = document.createElement("div");
   elevator.className = "elevator";
+  elevator.style.top = "";
+  container.appendChild(elevator);
 
-  const groundFloor = container.querySelector(`[data-floor="0"] .lift-shaft`);
-  groundFloor.appendChild(elevator);
   currentFloor = 0;
+  setElevatorToFloor(currentFloor);
 }
 
-function updateElevatorPosition(floor) {
-  const shaft = document.querySelector(`[data-floor="${floor}"] .lift-shaft`);
-  if (shaft) {
-    shaft.appendChild(elevator);
-  }
+function setElevatorToFloor(floor) {
+  const targetFloorEl = document.querySelector(`[data-floor="${floor}"]`);
+  if (!targetFloorEl) return;
+
+  const containerTop = document.getElementById("buildingContainer").getBoundingClientRect().top;
+  const targetTop = targetFloorEl.getBoundingClientRect().top;
+
+  const offset = targetTop - containerTop;
+
+  requestAnimationFrame(() => {
+    elevator.style.top = `${offset + 10}px`;
+  });
+
   currentFloor = floor;
+
+  
+  const display = document.getElementById("currentFloorDisplay");
+  if (display) display.textContent = floor;
 }
 
 function moveElevator(targetFloor) {
-  updateElevatorPosition(targetFloor);
+  if (targetFloor === currentFloor) return;
+
+  setElevatorToFloor(targetFloor);
 
   setTimeout(() => {
     const floorElement = document.querySelector(`.floor[data-floor='${targetFloor}']`);
@@ -65,7 +80,7 @@ function sendToDestination(pickupFloor) {
   const input = document.getElementById("destinationInput");
   const destination = parseInt(input.value);
 
-  if (isNaN(destination) || destination < 0 || destination >= totalFloors) {
+  if (isNaN(destination) || destination < 0 || destination > totalFloors) {
     alert("Please enter a valid floor.");
     return;
   }
@@ -88,4 +103,17 @@ function sendToDestination(pickupFloor) {
       }, 1200);
     }, 1000);
   }, 500);
+}
+
+function goToFloor() {
+  const input = document.getElementById("directDestination");
+  const floor = parseInt(input.value);
+
+  if (isNaN(floor) || floor < 0 || floor >= totalFloors) {
+    alert("Please enter a valid floor.");
+    return;
+  }
+
+  moveElevator(floor);
+  input.value = "";
 }
