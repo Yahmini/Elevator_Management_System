@@ -110,6 +110,8 @@ button:hover {
   z-index: 10;
   font-size: 14px;
 }
+
+/* 🚀 Enhanced Lift Controls */
 #liftControls {
   margin-top: 20px;
   padding: 15px;
@@ -118,15 +120,40 @@ button:hover {
   border-radius: 10px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.1);
   width: 280px;
-  text-align: left;
+  text-align: center;
 }
 
 #liftControls h3 {
   margin-top: 0;
   color: #2c3e50;
+  font-size: 1.2rem;
+  margin-bottom: 10px;
+}
+
+#liftControls p {
+  margin-bottom: 10px;
+  font-weight: bold;
+  color: #2c3e50;
 }
 
 #liftControls input {
-  width: 60px;
-  margin-right: 10px;
+  width: 80px;
+  margin-bottom: 8px;
+}
+
+/* ✅ Responsive for mobile */
+@media (max-width: 400px) {
+  #buildingContainer,
+  #liftControls {
+    width: 90%;
+  }
+
+  input, button {
+    width: 100%;
+    margin: 6px 0;
+  }
+
+  #liftControls input {
+    width: 100%;
+  }
 }

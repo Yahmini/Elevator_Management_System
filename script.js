@@ -1,3 +1,5 @@
+const backendURL = "http://localhost:8085";
+
 let totalFloors = 0;
 let elevator;
 let currentFloor = 0;
@@ -7,7 +9,7 @@ function buildBuilding() {
   container.innerHTML = "";
   totalFloors = parseInt(document.getElementById("floorInput").value);
 
-  for (let i = totalFloors; i >= 0; i--) {
+  for (let i = totalFloors - 1; i >= 0; i--) {
     const floor = document.createElement("div");
     floor.className = "floor";
     floor.setAttribute("data-floor", i);
@@ -18,7 +20,7 @@ function buildBuilding() {
 
     const controls = document.createElement("div");
     controls.className = "floor-controls";
-    controls.innerHTML = `<span class="floor-number">Floor ${i}</span><button onclick="moveElevator(${i})">Request</button>`;
+    controls.innerHTML = `<span class="floor-number">Floor ${i}</span><button onclick="requestPickup(${i})">Request</button>`;
     floor.appendChild(controls);
 
     container.appendChild(floor);
@@ -31,6 +33,8 @@ function buildBuilding() {
 
   currentFloor = 0;
   setElevatorToFloor(currentFloor);
+  updateFloorDisplay(currentFloor);
+  pollCurrentFloor();
 }
 
 function setElevatorToFloor(floor) {
@@ -39,7 +43,6 @@ function setElevatorToFloor(floor) {
 
   const containerTop = document.getElementById("buildingContainer").getBoundingClientRect().top;
   const targetTop = targetFloorEl.getBoundingClientRect().top;
-
   const offset = targetTop - containerTop;
 
   requestAnimationFrame(() => {
@@ -47,19 +50,30 @@ function setElevatorToFloor(floor) {
   });
 
   currentFloor = floor;
-
-  
-  const display = document.getElementById("currentFloorDisplay");
-  if (display) display.textContent = floor;
+  updateFloorDisplay(floor);
 }
 
-function moveElevator(targetFloor) {
-  if (targetFloor === currentFloor) return;
+function updateFloorDisplay(floor) {
+  const display = document.getElementById("currentFloorDisplay");
+  if (display) {
+    display.textContent = `${floor}`;
+  }
+}
 
-  setElevatorToFloor(targetFloor);
+// Called when a floor button is clicked
+function requestPickup(floor) {
+  fetch(`${backendURL}/pickup?floor=${floor}`)
+    .then(() => {
+      console.log(`Pickup requested from floor ${floor}`);
+    })
+    .catch(console.error);
 
+  showDestinationInputBox(floor);
+}
+
+function showDestinationInputBox(pickupFloor) {
   setTimeout(() => {
-    const floorElement = document.querySelector(`.floor[data-floor='${targetFloor}']`);
+    const floorElement = document.querySelector(`.floor[data-floor='${pickupFloor}']`);
 
     const existingBox = document.getElementById("destination-box");
     if (existingBox) existingBox.remove();
@@ -69,7 +83,7 @@ function moveElevator(targetFloor) {
     inputBox.innerHTML = `
       <label style="font-size: 13px; margin-bottom: 4px;">Enter destination:</label>
       <input type="number" id="destinationInput" placeholder="ex: 2" min="0" max="${totalFloors - 1}" style="width: 70px; padding: 4px;" />
-      <button onclick="sendToDestination(${targetFloor})" style="margin-top: 4px;">Go</button>
+      <button onclick="sendToDestination(${pickupFloor})" style="margin-top: 4px;">Go</button>
     `;
 
     floorElement.appendChild(inputBox);
@@ -80,29 +94,32 @@ function sendToDestination(pickupFloor) {
   const input = document.getElementById("destinationInput");
   const destination = parseInt(input.value);
 
-  if (isNaN(destination) || destination < 0 || destination > totalFloors) {
+  if (isNaN(destination) || destination < 0 || destination >= totalFloors) {
     alert("Please enter a valid floor.");
     return;
   }
 
-  document.getElementById("destination-box").remove();
+  fetch(`${backendURL}/destination?floor=${destination}`)
+    .then(() => {
+      console.log(`Destination set to floor ${destination}`);
+    })
+    .catch(console.error);
+
+  const inputBox = document.getElementById("destination-box");
+  if (inputBox) inputBox.remove();
 
   const pickupEl = document.querySelector(`.floor[data-floor='${pickupFloor}']`);
   pickupEl.classList.add("pickup-highlight");
 
   setTimeout(() => {
-    moveElevator(destination);
+    const dropEl = document.querySelector(`.floor[data-floor='${destination}']`);
+    dropEl.classList.add("drop-highlight");
 
     setTimeout(() => {
-      const dropEl = document.querySelector(`.floor[data-floor='${destination}']`);
-      dropEl.classList.add("drop-highlight");
-
-      setTimeout(() => {
-        pickupEl.classList.remove("pickup-highlight");
-        dropEl.classList.remove("drop-highlight");
-      }, 1200);
-    }, 1000);
-  }, 500);
+      pickupEl.classList.remove("pickup-highlight");
+      dropEl.classList.remove("drop-highlight");
+    }, 1200);
+  }, 2000);
 }
 
 function goToFloor() {
@@ -114,6 +131,21 @@ function goToFloor() {
     return;
   }
 
-  moveElevator(floor);
+  fetch(`${backendURL}/pickup?floor=${floor}`)
+    .then(() => console.log(`Manual pickup request to floor ${floor}`))
+    .catch(console.error);
+
   input.value = "";
+}
+
+// Poll elevator status every 2s
+function pollCurrentFloor() {
+  setInterval(() => {
+    fetch(`${backendURL}/status`)
+      .then((res) => res.json())
+      .then((data) => {
+        setElevatorToFloor(data.floor);
+      })
+      .catch(console.error);
+  }, 2000);
 }

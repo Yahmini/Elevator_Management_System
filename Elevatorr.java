@@ -107,4 +107,8 @@ public class Elevatorr implements Runnable {
                      .max(Integer::compareTo)
                      .orElse(null);
     }
+    public synchronized int getCurrentFloor() {
+        return currentFloor;
+    }
+    
 }
