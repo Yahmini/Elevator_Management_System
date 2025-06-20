@@ -1,6 +1,7 @@
+//Building.java
 public class Building {
     public static void main(String[] args) {
-        Elevatorr elevator = new Elevatorr(10);
+        Elevatorr elevator = new Elevatorr(100);
         Thread elevatorThread = new Thread(elevator);
         elevatorThread.start();
 

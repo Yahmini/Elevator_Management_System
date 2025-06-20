@@ -1,11 +1,9 @@
-// Elevatorr.java
 import java.util.*;
 
 public class Elevatorr implements Runnable {
     private int currentFloor = 0;
     private boolean goingUp = true;
     private boolean waitingForDestination = false;
-
     private final int maxFloor;
 
     private final TreeSet<Integer> pickupRequests = new TreeSet<>();
@@ -47,15 +45,28 @@ public class Elevatorr implements Runnable {
     }
 
     private synchronized void processStop() {
+        boolean stopped = false;
+    
         if (pickupRequests.remove(currentFloor)) {
             System.out.println("Pickup at floor: " + currentFloor);
             waitingForDestination = true;
+            stopped = true;
         }
-
+    
         if (destinationRequests.remove(currentFloor)) {
             System.out.println("Drop-off at floor: " + currentFloor);
+            stopped = true;
+        }
+    
+        if (stopped) {
+            try {
+                wait(4000); // Pause at the floor for 3 seconds
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
         }
     }
+    
 
     public void run() {
         while (true) {
@@ -66,8 +77,6 @@ public class Elevatorr implements Runnable {
                     }
                 }
 
-                Thread.sleep(1000);
-
                 synchronized (this) {
                     if (shouldStopAtCurrentFloor()) {
                         processStop();
@@ -75,25 +84,35 @@ public class Elevatorr implements Runnable {
 
                     if (waitingForDestination) {
                         System.out.println("Waiting 10 seconds for destination input...");
-                    
-                        synchronized (this) {
-                            wait(10000); // Wait for up to 10s
-                            waitingForDestination = false; // Continue even if no destination comes
-                        }
-                    } else {
-                        Integer nextFloor = getNextFloor();
-                        if (nextFloor != null) {
-                            goingUp = nextFloor > currentFloor;
-
-                            int diff = Math.abs(nextFloor - currentFloor);
-                            Thread.sleep(diff * 1000L); // smooth continuous movement
-
-                            currentFloor = nextFloor;
-                        }
-
+                        wait(10000);
+                        waitingForDestination = false;
+                        continue;
                     }
-                    
+
+                    Integer nextFloor = getNextFloor();
+                    if (nextFloor != null) {
+                        goingUp = nextFloor > currentFloor;
+
+                        while (currentFloor != nextFloor) {
+                            currentFloor += goingUp ? 1 : -1;
+                            System.out.println("Moving... Floor: " + currentFloor);
+
+                            if (shouldStopAtCurrentFloor()) {
+                                processStop();
+
+                                if (waitingForDestination) {
+                                    System.out.println("Waiting 10 seconds for destination input...");
+                                    wait(10000);
+                                    waitingForDestination = false;
+                                    break; // Stop further movement until destination is entered
+                                }
+                            }
+
+                            wait(1000); // 1 second per floor
+                        }
+                    }
                 }
+
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }

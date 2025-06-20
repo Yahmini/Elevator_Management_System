@@ -1,3 +1,4 @@
+//script.js
 const backendURL = "http://localhost:8085";
 
 let totalFloors = 0;
@@ -24,7 +25,7 @@ function buildBuilding() {
 
     const controls = document.createElement("div");
     controls.className = "floor-controls";
-    controls.innerHTML = `<span class="floor-number">Floor ${i}</span><button onclick="requestPickup(${i})">🔘</button>`;
+    controls.innerHTML = `<span class="floor-number">Floor ${i}</span><button onclick="requestPickup(${i})"></button>`;
     floor.appendChild(controls);
 
     container.appendChild(floor);

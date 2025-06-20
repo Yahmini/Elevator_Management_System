@@ -99,11 +99,9 @@ button:hover {
 }
 
 #destination-box {
-  display: none; /* or you can just delete this entire block */
+  display: none; 
 }
 
-/* 🎯 Lift Controls Panel */
-/* Elevator control panel */
 #liftControls {
   position: absolute;
   top: 100px;
@@ -116,13 +114,13 @@ button:hover {
   box-shadow: 0 4px 12px rgba(0,0,0,0.1);
   text-align: center;
 }
-/* Highlight request button when active */
+
 .request-pending {
   background-color: orange !important;
   color: white;
 }
 
-/* Highlight PICKUP floor in GREEN */
+
 .floor.pickup-highlight {
   background-color: #d4edda !important; /* soft green */
   transition: background-color 0.5s ease;
@@ -156,7 +154,6 @@ button:hover {
   opacity: 1;
 }
 
-/* Button style */
 #liftControls button {
   background-color: #3498db;
   color: white;
@@ -167,7 +164,6 @@ button:hover {
   background-color: #2980b9;
 }
 
-/* Optional responsive design */
 @media (max-width: 500px) {
   #liftControls {
     position: static;
