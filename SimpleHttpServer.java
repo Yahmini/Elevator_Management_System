@@ -31,8 +31,11 @@ public class SimpleHttpServer {
         });
 
         server.createContext("/status", exchange -> {
-            respond(exchange, "{ \"floor\": " + elevator.getCurrentFloor() + " }");
+            String responseJson = "{ \"floor\": " + elevator.getCurrentFloor() +
+                                  ", \"waiting\": " + elevator.isWaitingForDestination() + " }";
+            respond(exchange, responseJson);
         });
+        
 
         server.setExecutor(null);
         server.start();

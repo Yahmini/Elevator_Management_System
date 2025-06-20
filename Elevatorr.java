@@ -4,6 +4,8 @@ import java.util.*;
 public class Elevatorr implements Runnable {
     private int currentFloor = 0;
     private boolean goingUp = true;
+    private boolean waitingForDestination = false;
+
     private final int maxFloor;
 
     private final TreeSet<Integer> pickupRequests = new TreeSet<>();
@@ -23,12 +25,17 @@ public class Elevatorr implements Runnable {
     public synchronized void addDestinationRequest(int floor) {
         if (floor >= 0 && floor <= maxFloor) {
             destinationRequests.add(floor);
+            waitingForDestination = false;
             notifyAll();
         }
     }
 
     public synchronized int getCurrentFloor() {
         return currentFloor;
+    }
+
+    public synchronized boolean isWaitingForDestination() {
+        return waitingForDestination;
     }
 
     private synchronized boolean hasRequests() {
@@ -42,6 +49,7 @@ public class Elevatorr implements Runnable {
     private synchronized void processStop() {
         if (pickupRequests.remove(currentFloor)) {
             System.out.println("Pickup at floor: " + currentFloor);
+            waitingForDestination = true;
         }
 
         if (destinationRequests.remove(currentFloor)) {
@@ -53,7 +61,9 @@ public class Elevatorr implements Runnable {
         while (true) {
             try {
                 synchronized (this) {
-                    while (!hasRequests()) wait();
+                    while (!hasRequests() || waitingForDestination) {
+                        wait();
+                    }
                 }
 
                 Thread.sleep(1500);
@@ -63,10 +73,12 @@ public class Elevatorr implements Runnable {
                         processStop();
                     }
 
-                    Integer nextFloor = getNextFloor();
-                    if (nextFloor != null) {
-                        goingUp = nextFloor > currentFloor;
-                        currentFloor += goingUp ? 1 : -1;
+                    if (!waitingForDestination) {
+                        Integer nextFloor = getNextFloor();
+                        if (nextFloor != null) {
+                            goingUp = nextFloor > currentFloor;
+                            currentFloor += goingUp ? 1 : -1;
+                        }
                     }
                 }
             } catch (InterruptedException e) {
@@ -81,11 +93,13 @@ public class Elevatorr implements Runnable {
         allRequests.addAll(destinationRequests);
 
         if (goingUp) {
-            return allRequests.ceiling(currentFloor + 1) != null ? allRequests.ceiling(currentFloor + 1)
-                                                                  : allRequests.floor(currentFloor - 1);
+            return allRequests.ceiling(currentFloor + 1) != null
+                    ? allRequests.ceiling(currentFloor + 1)
+                    : allRequests.floor(currentFloor - 1);
         } else {
-            return allRequests.floor(currentFloor - 1) != null ? allRequests.floor(currentFloor - 1)
-                                                               : allRequests.ceiling(currentFloor + 1);
+            return allRequests.floor(currentFloor - 1) != null
+                    ? allRequests.floor(currentFloor - 1)
+                    : allRequests.ceiling(currentFloor + 1);
         }
     }
 }
