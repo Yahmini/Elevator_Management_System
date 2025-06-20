@@ -180,3 +180,8 @@ button:hover {
     margin-top: 8px;
   }
 }
+.floor.drop-purple {
+  background-color: #f7c3c3 !important; 
+  transition: background-color 0.5s ease;
+}
+

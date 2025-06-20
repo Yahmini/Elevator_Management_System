@@ -66,20 +66,33 @@ public class Elevatorr implements Runnable {
                     }
                 }
 
-                Thread.sleep(1500);
+                Thread.sleep(1000);
 
                 synchronized (this) {
                     if (shouldStopAtCurrentFloor()) {
                         processStop();
                     }
 
-                    if (!waitingForDestination) {
+                    if (waitingForDestination) {
+                        System.out.println("Waiting 10 seconds for destination input...");
+                    
+                        synchronized (this) {
+                            wait(10000); // Wait for up to 10s
+                            waitingForDestination = false; // Continue even if no destination comes
+                        }
+                    } else {
                         Integer nextFloor = getNextFloor();
                         if (nextFloor != null) {
                             goingUp = nextFloor > currentFloor;
-                            currentFloor += goingUp ? 1 : -1;
+
+                            int diff = Math.abs(nextFloor - currentFloor);
+                            Thread.sleep(diff * 1000L); // smooth continuous movement
+
+                            currentFloor = nextFloor;
                         }
+
                     }
+                    
                 }
             } catch (InterruptedException e) {
                 e.printStackTrace();

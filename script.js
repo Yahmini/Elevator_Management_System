@@ -5,6 +5,8 @@ let elevator;
 let currentFloor = 0;
 let awaitingInput = false;
 let lastWaitingFloor = -1;
+let destinationTimeout = null;
+
 
 function buildBuilding() {
   const container = document.getElementById("buildingContainer");
@@ -22,7 +24,7 @@ function buildBuilding() {
 
     const controls = document.createElement("div");
     controls.className = "floor-controls";
-    controls.innerHTML = `<span class="floor-number">Floor ${i}</span><button onclick="requestPickup(${i})"></button>`;
+    controls.innerHTML = `<span class="floor-number">Floor ${i}</span><button onclick="requestPickup(${i})">🔘</button>`;
     floor.appendChild(controls);
 
     container.appendChild(floor);
@@ -30,6 +32,7 @@ function buildBuilding() {
 
   elevator = document.createElement("div");
   elevator.className = "elevator";
+
   container.appendChild(elevator);
 
   currentFloor = 0;
@@ -39,14 +42,11 @@ function buildBuilding() {
 }
 
 function requestPickup(floor) {
-    const button = document.querySelector(`[data-floor="${floor}"] button`);
-    if (button) {
-      button.classList.add("request-pending");
-    }
-  
-    fetch(`${backendURL}/pickup?floor=${floor}`);
-  }
-  
+  const button = document.querySelector(`[data-floor="${floor}"] button`);
+  if (button) button.classList.add("request-pending");
+
+  fetch(`${backendURL}/pickup?floor=${floor}`);
+}
 
 function sendToDestination() {
     const input = document.getElementById("directDestination");
@@ -58,52 +58,70 @@ function sendToDestination() {
       return;
     }
   
+    
+    clearTimeout(destinationTimeout);
+  
     fetch(`${backendURL}/destination?floor=${dest}`).then(() => {
       input.value = "";
       input.disabled = true;
       document.getElementById("goBtn").disabled = true;
       awaitingInput = false;
-      lastWaitingFloor = -1; // ✅ so it can trigger again later
+      lastWaitingFloor = -1;
     });
   }
   
+
+  function showControlInputBox(floor) {
+    const input = document.getElementById("directDestination");
+    const btn = document.getElementById("goBtn");
+    input.disabled = false;
+    btn.disabled = false;
+    input.setAttribute("data-pickup", floor);
+    awaitingInput = true;
   
 
-function showControlInputBox(floor) {
-  const input = document.getElementById("directDestination");
-  const btn = document.getElementById("goBtn");
-  input.disabled = false;
-  btn.disabled = false;
-  input.setAttribute("data-pickup", floor);
-  awaitingInput = true;
-}
-
-function setElevatorToFloor(floor) {
-    const target = document.querySelector(`[data-floor="${floor}"]`);
-    if (!target) return;
+    if (destinationTimeout) clearTimeout(destinationTimeout);
+    destinationTimeout = setTimeout(() => {
+      input.disabled = true;
+      btn.disabled = true;
+      input.value = "";
+      awaitingInput = false;
+      lastWaitingFloor = -1;
   
-    const offset = target.offsetTop;
-    elevator.style.top = `${offset + 10}px`;
-    updateFloorDisplay(floor);
-  
-    // Remove request-pending if present (pickup done)
-    const pickupButton = target.querySelector("button");
-    if (pickupButton) {
-      pickupButton.classList.remove("request-pending");
-    }
-  
-    // If drop highlight needed
-    if (target.classList.contains("drop-highlight")) return;
-  
-    // Check if it's a drop-off floor
-    if (!awaitingInput && lastWaitingFloor !== floor) {
-      target.classList.add("drop-highlight");
-      setTimeout(() => {
-        target.classList.remove("drop-highlight");
-      }, 2000);
-    }
+      
+      fetch(`${backendURL}/timeout?floor=${floor}`);
+    }, 8000);
   }
   
+
+function setElevatorToFloor(floor) {
+  const target = document.querySelector(`[data-floor="${floor}"]`);
+  if (!target) return;
+
+  const offset = target.offsetTop;
+  elevator.style.top = `${offset + 10}px`;
+  updateFloorDisplay(floor);
+
+  
+  const pickupBtn = target.querySelector("button");
+  if (pickupBtn?.classList.contains("request-pending")) {
+    target.classList.add("pickup-highlight");
+    pickupBtn.classList.remove("request-pending");
+
+    setTimeout(() => {
+      target.classList.remove("pickup-highlight");
+    }, 2000);
+  }
+
+  
+if (!awaitingInput && lastWaitingFloor !== floor) {
+    target.classList.add("drop-purple");
+    setTimeout(() => {
+      target.classList.remove("drop-purple");
+    }, 2000);
+  }
+  
+}
 
 function updateFloorDisplay(floor) {
   const display = document.getElementById("currentFloorDisplay");
@@ -113,8 +131,8 @@ function updateFloorDisplay(floor) {
 function pollCurrentFloor() {
   setInterval(() => {
     fetch(`${backendURL}/status`)
-      .then(res => res.json())
-      .then(data => {
+      .then((res) => res.json())
+      .then((data) => {
         setElevatorToFloor(data.floor);
         currentFloor = data.floor;
 
