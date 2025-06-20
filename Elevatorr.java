@@ -1,15 +1,13 @@
+// Elevatorr.java
 import java.util.*;
-import java.util.stream.Stream;
 
 public class Elevatorr implements Runnable {
     private int currentFloor = 0;
     private boolean goingUp = true;
-    private boolean pause = false;
     private final int maxFloor;
 
-    private final Set<Integer> pickupRequests = new TreeSet<>();
-    private final Set<Integer> destinationRequests = new TreeSet<>();
-    private final Queue<Integer> enteredFloors = new LinkedList<>();
+    private final TreeSet<Integer> pickupRequests = new TreeSet<>();
+    private final TreeSet<Integer> destinationRequests = new TreeSet<>();
 
     public Elevatorr(int maxFloor) {
         this.maxFloor = maxFloor;
@@ -18,97 +16,76 @@ public class Elevatorr implements Runnable {
     public synchronized void addPickupRequest(int floor) {
         if (floor >= 0 && floor <= maxFloor) {
             pickupRequests.add(floor);
-        } else {
-            System.out.println("Invalid floor: " + floor);
+            notifyAll();
         }
     }
 
     public synchronized void addDestinationRequest(int floor) {
         if (floor >= 0 && floor <= maxFloor) {
             destinationRequests.add(floor);
-            pause = false;
-            notifyAll(); // Wake elevator
-        } else {
-            System.out.println("Invalid destination: " + floor);
+            notifyAll();
         }
     }
 
-    public synchronized Integer pollEnteredFloor() {
-        return enteredFloors.poll();
+    public synchronized int getCurrentFloor() {
+        return currentFloor;
     }
 
-    public synchronized void resumeAfterTimeout() {
-        pause = false;
-        notifyAll();
+    private synchronized boolean hasRequests() {
+        return !pickupRequests.isEmpty() || !destinationRequests.isEmpty();
+    }
+
+    private synchronized boolean shouldStopAtCurrentFloor() {
+        return pickupRequests.contains(currentFloor) || destinationRequests.contains(currentFloor);
+    }
+
+    private synchronized void processStop() {
+        if (pickupRequests.remove(currentFloor)) {
+            System.out.println("Pickup at floor: " + currentFloor);
+        }
+
+        if (destinationRequests.remove(currentFloor)) {
+            System.out.println("Drop-off at floor: " + currentFloor);
+        }
     }
 
     public void run() {
         while (true) {
             try {
                 synchronized (this) {
-                    while (pause) {
-                        wait(); // Wait for destination input or timeout
+                    while (!hasRequests()) wait();
+                }
+
+                Thread.sleep(1500);
+
+                synchronized (this) {
+                    if (shouldStopAtCurrentFloor()) {
+                        processStop();
+                    }
+
+                    Integer nextFloor = getNextFloor();
+                    if (nextFloor != null) {
+                        goingUp = nextFloor > currentFloor;
+                        currentFloor += goingUp ? 1 : -1;
                     }
                 }
-                Thread.sleep(1500);
-                processRequests();
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
         }
     }
 
-    private synchronized void processRequests() {
-        System.out.println("Elevator at floor: " + currentFloor);
-
-        if (pickupRequests.contains(currentFloor)) {
-            System.out.println("Person picked up at floor: " + currentFloor);
-            pickupRequests.remove(currentFloor);
-            enteredFloors.add(currentFloor);
-            pause = true;
-        }
-        
-        if (destinationRequests.contains(currentFloor)) {
-            System.out.println("Person dropped off at floor: " + currentFloor);
-            destinationRequests.remove(currentFloor);
-        }
-
-
-        Integer nextUp = findNextAbove();
-        Integer nextDown = findNextBelow();
+    private Integer getNextFloor() {
+        TreeSet<Integer> allRequests = new TreeSet<>();
+        allRequests.addAll(pickupRequests);
+        allRequests.addAll(destinationRequests);
 
         if (goingUp) {
-            if (nextUp != null) {
-                currentFloor++;
-            } else if (nextDown != null) {
-                goingUp = false;
-                currentFloor--;
-            }
+            return allRequests.ceiling(currentFloor + 1) != null ? allRequests.ceiling(currentFloor + 1)
+                                                                  : allRequests.floor(currentFloor - 1);
         } else {
-            if (nextDown != null) {
-                currentFloor--;
-            } else if (nextUp != null) {
-                goingUp = true;
-                currentFloor++;
-            }
+            return allRequests.floor(currentFloor - 1) != null ? allRequests.floor(currentFloor - 1)
+                                                               : allRequests.ceiling(currentFloor + 1);
         }
     }
-
-    private Integer findNextAbove() {
-        return Stream.concat(pickupRequests.stream(), destinationRequests.stream())
-                     .filter(f -> f > currentFloor)
-                     .min(Integer::compareTo)
-                     .orElse(null);
-    }
-    
-    private Integer findNextBelow() {
-        return Stream.concat(pickupRequests.stream(), destinationRequests.stream())
-                     .filter(f -> f < currentFloor)
-                     .max(Integer::compareTo)
-                     .orElse(null);
-    }
-    public synchronized int getCurrentFloor() {
-        return currentFloor;
-    }
-    
 }

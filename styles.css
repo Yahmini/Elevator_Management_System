@@ -111,7 +111,6 @@ button:hover {
   font-size: 14px;
 }
 
-/* 🚀 Enhanced Lift Controls */
 #liftControls {
   margin-top: 20px;
   padding: 15px;
@@ -139,6 +138,17 @@ button:hover {
 #liftControls input {
   width: 80px;
   margin-bottom: 8px;
+}
+
+#inputPromptContainer {
+  position: absolute;
+  right: 20px;
+  top: 80px;
+  background-color: #fff;
+  padding: 12px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  z-index: 20;
 }
 
 /* ✅ Responsive for mobile */

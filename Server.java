@@ -1,4 +1,4 @@
-// Server.java
+
 import java.io.*;
 import java.net.*;
 import java.util.Scanner;
@@ -11,7 +11,6 @@ public class Server implements Runnable {
     }
 
     public void run() {
-        // Thread to collect destination input when someone enters
         new Thread(() -> {
             Scanner scanner = new Scanner(System.in);
             while (true) {
