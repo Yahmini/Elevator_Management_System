@@ -1,6 +1,9 @@
 import java.util.*;
 
 public class Elevatorr implements Runnable {
+    private final String name;
+    private boolean inMaintenance = false;
+
     private int currentFloor = 0;
     private boolean goingUp = true;
     private boolean waitingForDestination = false;
@@ -8,20 +11,23 @@ public class Elevatorr implements Runnable {
 
     private final TreeSet<Integer> pickupRequests = new TreeSet<>();
     private final TreeSet<Integer> destinationRequests = new TreeSet<>();
+    private final List<Integer> globalPickupRequests;
 
-    public Elevatorr(int maxFloor) {
+    public Elevatorr(String name, int maxFloor, List<Integer> globalPickupRequests) {
+        this.name = name;
         this.maxFloor = maxFloor;
+        this.globalPickupRequests = globalPickupRequests;
     }
 
     public synchronized void addPickupRequest(int floor) {
-        if (floor >= 0 && floor <= maxFloor) {
+        if (!inMaintenance && floor >= 0 && floor <= maxFloor) {
             pickupRequests.add(floor);
             notifyAll();
         }
     }
 
     public synchronized void addDestinationRequest(int floor) {
-        if (floor >= 0 && floor <= maxFloor) {
+        if (!inMaintenance && floor >= 0 && floor <= maxFloor) {
             destinationRequests.add(floor);
             waitingForDestination = false;
             notifyAll();
@@ -36,6 +42,17 @@ public class Elevatorr implements Runnable {
         return waitingForDestination;
     }
 
+    public synchronized boolean isInMaintenance() {
+        return inMaintenance;
+    }
+
+    public synchronized void setInMaintenance(boolean inMaintenance) {
+        this.inMaintenance = inMaintenance;
+        if (!inMaintenance) {
+            notifyAll(); // Resume thread if it's re-enabled
+        }
+    }
+
     private synchronized boolean hasRequests() {
         return !pickupRequests.isEmpty() || !destinationRequests.isEmpty();
     }
@@ -46,47 +63,71 @@ public class Elevatorr implements Runnable {
 
     private synchronized void processStop() {
         boolean stopped = false;
-    
+
         if (pickupRequests.remove(currentFloor)) {
-            System.out.println("Pickup at floor: " + currentFloor);
+            System.out.println("Elevator " + name + " picked up at floor: " + currentFloor);
             waitingForDestination = true;
             stopped = true;
         }
-    
+
         if (destinationRequests.remove(currentFloor)) {
-            System.out.println("Drop-off at floor: " + currentFloor);
+            System.out.println("Elevator " + name + " dropped off at floor: " + currentFloor);
             stopped = true;
         }
-    
+
         if (stopped) {
             try {
-                wait(4000); // Pause at the floor for 3 seconds
+                wait(3000); // pause at the floor for 3 seconds
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
         }
     }
-    
+
+    private void claimNearbyPickup() {
+        synchronized (globalPickupRequests) {
+            Iterator<Integer> iterator = globalPickupRequests.iterator();
+            while (iterator.hasNext()) {
+                int floor = iterator.next();
+                if (Math.abs(floor - currentFloor) <= 3) {
+                    synchronized (this) {
+                        pickupRequests.add(floor);
+                        notifyAll();
+                    }
+                    iterator.remove();
+                    break;
+                }
+            }
+        }
+    }
 
     public void run() {
         while (true) {
             try {
                 synchronized (this) {
-                    while (!hasRequests() || waitingForDestination) {
-                        wait();
+                    // 🚧 Wait here if in maintenance mode
+                    while (inMaintenance) {
+                        wait(); // Suspended while in maintenance
                     }
-                }
 
-                synchronized (this) {
+                    // Take from global queue if idle
+                    if (!hasRequests()) {
+                        claimNearbyPickup();
+                    }
+
+                    while (!hasRequests()) {
+                        wait(); // nothing to do
+                    }
+
+                    // Handle floor stop if needed
                     if (shouldStopAtCurrentFloor()) {
                         processStop();
-                    }
 
-                    if (waitingForDestination) {
-                        System.out.println("Waiting 10 seconds for destination input...");
-                        wait(10000);
-                        waitingForDestination = false;
-                        continue;
+                        // If it's a pickup, allow user to enter destination
+                        if (waitingForDestination) {
+                            wait(10000); // wait for destination input
+                            waitingForDestination = false;
+                        }
                     }
 
                     Integer nextFloor = getNextFloor();
@@ -94,44 +135,43 @@ public class Elevatorr implements Runnable {
                         goingUp = nextFloor > currentFloor;
 
                         while (currentFloor != nextFloor) {
+                            if (inMaintenance) break; // if maintenance is triggered mid-move
+
                             currentFloor += goingUp ? 1 : -1;
-                            System.out.println("Moving... Floor: " + currentFloor);
+                            System.out.println("Elevator " + name + " moving... Floor: " + currentFloor);
 
                             if (shouldStopAtCurrentFloor()) {
                                 processStop();
-
                                 if (waitingForDestination) {
-                                    System.out.println("Waiting 10 seconds for destination input...");
-                                    wait(10000);
+                                    wait(10000); // wait at that floor
                                     waitingForDestination = false;
-                                    break; // Stop further movement until destination is entered
+                                    break; // exit loop to re-check queue
                                 }
                             }
 
-                            wait(1000); // 1 second per floor
+                            wait(1000); // simulate time per floor
                         }
                     }
                 }
-
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                Thread.currentThread().interrupt();
             }
         }
     }
 
-    private Integer getNextFloor() {
+    private synchronized Integer getNextFloor() {
         TreeSet<Integer> allRequests = new TreeSet<>();
         allRequests.addAll(pickupRequests);
         allRequests.addAll(destinationRequests);
 
         if (goingUp) {
-            return allRequests.ceiling(currentFloor + 1) != null
-                    ? allRequests.ceiling(currentFloor + 1)
-                    : allRequests.floor(currentFloor - 1);
+            Integer higher = allRequests.ceiling(currentFloor + 1);
+            if (higher != null) return higher;
+            return allRequests.floor(currentFloor - 1);
         } else {
-            return allRequests.floor(currentFloor - 1) != null
-                    ? allRequests.floor(currentFloor - 1)
-                    : allRequests.ceiling(currentFloor + 1);
+            Integer lower = allRequests.floor(currentFloor - 1);
+            if (lower != null) return lower;
+            return allRequests.ceiling(currentFloor + 1);
         }
     }
 }

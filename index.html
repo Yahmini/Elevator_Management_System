@@ -3,32 +3,36 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Elevator Simulation</title>
+  <title>Dual Elevator Simulation</title>
   <link rel="stylesheet" href="styles.css"/>
 </head>
 <body>
-  <h1>Elevator Simulation</h1>
-
+  <h1>Dual Elevator Simulation</h1>
 
   <div id="setup">
     <label for="floorInput">Number of Floors:</label>
     <input type="number" id="floorInput" min="1" max="50" placeholder="e.g. 5" />
     <button onclick="buildBuilding()">Build</button>
+    <div id="maintenanceControls"></div>
   </div>
 
   <div id="buildingContainer"></div>
 
-<div id="liftControls">
-  <h3>Lift Controls</h3>
-  <p><strong>Current Floor:</strong> <span id="currentFloorDisplay">0</span></p>
+  <div id="liftControls">
+    <h3>Lift Controls</h3>
 
-  <label for="directDestination">Go to floor:</label>
-  <input type="number" id="directDestination" min="0" placeholder="e.g. 2" disabled />
-  <button id="goBtn" onclick="sendToDestination()" disabled>Go</button>
-</div>
+    <div>
+      <label>Elevator A Destination:</label>
+      <input type="number" id="directDestinationA" min="0" placeholder="e.g. 2" disabled />
+      <button id="goBtnA" onclick="sendToDestination('A')" disabled>Go</button>
+    </div>
 
-
-  <div id="inputPromptContainer"></div>
+    <div>
+      <label>Elevator B Destination:</label>
+      <input type="number" id="directDestinationB" min="0" placeholder="e.g. 3" disabled />
+      <button id="goBtnB" onclick="sendToDestination('B')" disabled>Go</button>
+    </div>
+  </div>
 
   <script src="script.js"></script>
 </body>

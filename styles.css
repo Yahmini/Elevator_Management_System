@@ -44,7 +44,7 @@ button:hover {
   border: 2px solid #2c3e50;
   width: 300px;
   background-color: white;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   border-radius: 8px;
   overflow: hidden;
 }
@@ -52,7 +52,6 @@ button:hover {
 .floor {
   height: 60px;
   display: flex;
-  flex-direction: row;
   border-top: 1px solid #ccc;
   background-color: #f1f1f1;
   position: relative;
@@ -64,6 +63,14 @@ button:hover {
   height: 100%;
   position: relative;
   border-right: 1px solid #999;
+}
+
+.shaft-A {
+  background-color: #e0f7fa;
+}
+
+.shaft-B {
+  background-color: #fff3e0;
 }
 
 .floor-controls {
@@ -79,62 +86,66 @@ button:hover {
   color: #333;
 }
 
+/* Elevators */
 .elevator {
   width: 40px;
   height: 40px;
-  background-color: rgb(39, 154, 148);
   position: absolute;
-  left: 10px;
   border-radius: 6px;
   box-shadow: 0 0 6px rgba(0, 0, 0, 0.3);
   transition: top 1.5s ease-in-out;
 }
 
-.pickup-highlight {
+.elevator-A {
+  background-color: #4CAF50;
+  left: 10px;
+}
+
+.elevator-B {
+  background-color: #2196F3;
+  left: 60px;
+}
+
+/* Grayed elevator in maintenance mode */
+.elevator.maintenance {
+  opacity: 0.3;
+}
+
+/* Pickup and Drop Effects */
+.floor.pickup-highlight {
   background-color: #ffeeba !important;
 }
 
-.drop-highlight {
-  background-color: #d4edda !important;
+.floor.drop-highlight {
+  background-color: #f8d7da !important;
 }
 
-#destination-box {
-  display: none; 
+.floor.drop-purple {
+  background-color: #f7c3c3 !important;
+  transition: background-color 0.5s ease;
 }
 
-#liftControls {
-  position: absolute;
-  top: 100px;
-  right: 30px;
-  width: 220px;
-  padding: 15px;
-  background-color: #ffffff;
-  border: 2px solid #2c3e50;
-  border-radius: 10px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-  text-align: center;
-}
-
+/* Pending button */
 .request-pending {
   background-color: orange !important;
   color: white;
 }
 
-
-.floor.pickup-highlight {
-  background-color: #d4edda !important; /* soft green */
-  transition: background-color 0.5s ease;
+/* Lift Control Panel */
+#liftControls {
+  position: absolute;
+  top: 100px;
+  right: 30px;
+  width: 240px;
+  padding: 15px;
+  background-color: #ffffff;
+  border: 2px solid #2c3e50;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  text-align: center;
 }
 
-/* Highlight DROP-OFF floor in RED */
-.floor.drop-highlight {
-  background-color: #f8d7da !important; /* soft red */
-  transition: background-color 0.5s ease;
-}
-
-
-
-/* Control input box default state */
+/* Control input states */
 #liftControls input:disabled,
 #liftControls button:disabled {
   background-color: #f0f0f0;
@@ -144,7 +155,6 @@ button:hover {
   opacity: 0.6;
 }
 
-/* Active state */
 #liftControls input:enabled,
 #liftControls button:enabled {
   background-color: #ffffff;
@@ -154,16 +164,43 @@ button:hover {
   opacity: 1;
 }
 
-#liftControls button {
-  background-color: #3498db;
-  color: white;
-  transition: background-color 0.3s ease;
-}
-
 #liftControls button:hover:enabled {
   background-color: #2980b9;
 }
 
+/* Maintenance Controls Section */
+#maintenanceControls {
+  margin-top: 20px;
+  padding: 15px;
+  background: #ffffff;
+  border: 2px solid #2c3e50;
+  border-radius: 8px;
+  width: 250px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  text-align: left;
+}
+
+#maintenanceControls h3 {
+  margin-top: 0;
+  font-size: 18px;
+  color: #2c3e50;
+}
+
+#maintenanceControls label {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+  font-size: 14px;
+  color: #333;
+}
+
+#maintenanceControls input[type="checkbox"] {
+  margin-right: 8px;
+  transform: scale(1.1);
+  cursor: pointer;
+}
+
+/* Responsive Design */
 @media (max-width: 500px) {
   #liftControls {
     position: static;
@@ -175,9 +212,12 @@ button:hover {
     width: 100%;
     margin-top: 8px;
   }
-}
-.floor.drop-purple {
-  background-color: #f7c3c3 !important; 
-  transition: background-color 0.5s ease;
-}
 
+  #buildingContainer {
+    width: 90%;
+  }
+
+  #maintenanceControls {
+    width: 90%;
+  }
+}
