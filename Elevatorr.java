@@ -13,6 +13,8 @@ public class Elevatorr implements Runnable {
     private final TreeSet<Integer> destinationRequests = new TreeSet<>();
     private final List<Integer> globalPickupRequests;
 
+    private static final int THRESHOLD_DISTANCE = 10;
+
     public Elevatorr(String name, int maxFloor, List<Integer> globalPickupRequests) {
         this.name = name;
         this.maxFloor = maxFloor;
@@ -170,14 +172,26 @@ public class Elevatorr implements Runnable {
         allRequests.addAll(pickupRequests);
         allRequests.addAll(destinationRequests);
 
+        // Priority requests within threshold
+        TreeSet<Integer> priorityRequests = new TreeSet<>();
+        for (Integer floor : allRequests) {
+            if (Math.abs(floor - currentFloor) <= THRESHOLD_DISTANCE) {
+                priorityRequests.add(floor);
+            }
+        }
+
+        TreeSet<Integer> targetSet = priorityRequests.isEmpty() ? allRequests : priorityRequests;
+
         if (goingUp) {
-            Integer higher = allRequests.ceiling(currentFloor + 1);
+            Integer higher = targetSet.ceiling(currentFloor + 1);
             if (higher != null) return higher;
-            return allRequests.floor(currentFloor - 1);
+            return targetSet.floor(currentFloor - 1);
         } else {
-            Integer lower = allRequests.floor(currentFloor - 1);
+            Integer lower = targetSet.floor(currentFloor - 1);
             if (lower != null) return lower;
-            return allRequests.ceiling(currentFloor + 1);
+            return targetSet.ceiling(currentFloor + 1);
         }
     }
 }
+
+
