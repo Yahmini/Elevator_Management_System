@@ -111,8 +111,9 @@ function pollElevators() {
           let state = data[`elevator${id}`];
           if (!state) return;
 
-          elevators[id].currentFloor = state.floor;
-          elevators[id].inMaintenance = state.inMaintenance;
+          const elevator = elevators[id];
+          elevator.currentFloor = state.floor;
+          elevator.inMaintenance = state.inMaintenance;
 
           setElevatorToFloor(id, state.floor);
 
@@ -120,23 +121,37 @@ function pollElevators() {
           const btn = document.getElementById(`goBtn${id}`);
           const toggle = document.getElementById(`maintToggle${id}`);
 
-          if (state.waiting && !elevators[id].awaitingInput && !state.inMaintenance) {
+          // Enable destination input when elevator is waiting (once)
+          if (state.waiting && !elevator.awaitingInput && !state.inMaintenance) {
             input.disabled = false;
             btn.disabled = false;
-            elevators[id].awaitingInput = true;
+            elevator.awaitingInput = true;
+
+            // Auto-disable after 10 seconds
+            setTimeout(() => {
+              input.disabled = true;
+              btn.disabled = true;
+              input.value = "";
+              elevator.awaitingInput = false;
+            }, 10000);
           }
 
           // Reflect maintenance toggle state
           if (toggle) toggle.checked = !state.inMaintenance;
 
-          // Gray out elevator in maintenance
-          elevators[id].element.style.opacity = state.inMaintenance ? "0.3" : "1";
-          input.disabled = state.inMaintenance;
-          btn.disabled = state.inMaintenance;
+          // Disable controls during maintenance
+          if (state.inMaintenance) {
+            input.disabled = true;
+            btn.disabled = true;
+            elevator.awaitingInput = false;
+          }
+
+          elevator.element.style.opacity = state.inMaintenance ? "0.3" : "1";
         });
       });
   }, 1000);
 }
+
 
 // Maintenance toggle
 function setupMaintenanceToggles() {
