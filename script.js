@@ -1,9 +1,10 @@
 const backendURL = "http://localhost:8085";
 
 let totalFloors = 0;
-let elevators = {
-  A: { element: null, currentFloor: 0, awaitingInput: false, lastWaitingFloor: -1, inMaintenance: false },
-  B: { element: null, currentFloor: 0, awaitingInput: false, lastWaitingFloor: -1, inMaintenance: false }
+
+elevators = {
+  A: { element: null, currentFloor: 0, awaitingInput: false, lastWaitingFloor: -1, inMaintenance: false, previousFloor: -1, inputTimeout: null },
+  B: { element: null, currentFloor: 0, awaitingInput: false, lastWaitingFloor: -1, inMaintenance: false, previousFloor: -1, inputTimeout: null }
 };
 
 function buildBuilding() {
@@ -35,10 +36,18 @@ function buildBuilding() {
 
   elevators.A.element = document.createElement("div");
   elevators.A.element.className = "elevator elevator-A";
+  elevators.A.element.innerHTML = `
+    <div class="elevator-door left"></div>
+    <div class="elevator-door right"></div>
+  `;
   container.appendChild(elevators.A.element);
 
   elevators.B.element = document.createElement("div");
   elevators.B.element.className = "elevator elevator-B";
+  elevators.B.element.innerHTML = `
+    <div class="elevator-door left"></div>
+    <div class="elevator-door right"></div>
+  `;
   container.appendChild(elevators.B.element);
 
   setupMaintenanceToggles();
@@ -49,8 +58,7 @@ function requestPickup(floor) {
   const button = document.querySelector(`[data-floor="${floor}"] button`);
   if (button) button.classList.add("request-pending");
 
-  fetch(`${backendURL}/pickup?floor=${floor}`)
-    .then(_ => console.log("Pickup sent", floor));
+  fetch(`${backendURL}/pickup?floor=${floor}`).then(_ => console.log("Pickup sent", floor));
 }
 
 function sendToDestination(elevatorId) {
@@ -62,6 +70,7 @@ function sendToDestination(elevatorId) {
     alert("Enter a valid floor");
     return;
   }
+  clearTimeout(elevators[elevatorId].inputTimeout);
 
   fetch(`${backendURL}/destination?elevator=${elevatorId}&floor=${dest}`).then(() => {
     input.value = "";
@@ -72,14 +81,6 @@ function sendToDestination(elevatorId) {
   });
 }
 
-function showControlInputBox(elevatorId, floor) {
-  const input = document.getElementById(`directDestination${elevatorId}`);
-  const btn = document.getElementById(`goBtn${elevatorId}`);
-
-  input.disabled = false;
-  btn.disabled = false;
-  elevators[elevatorId].awaitingInput = true;
-}
 
 function setElevatorToFloor(elevatorId, floor) {
   const elevatorData = elevators[elevatorId];
@@ -89,6 +90,7 @@ function setElevatorToFloor(elevatorId, floor) {
   const floorTop = target.offsetTop;
   elevatorData.element.style.top = `${floorTop + 10}px`;
 
+  // Pickup highlight
   const pickupBtn = target.querySelector("button");
   if (pickupBtn?.classList.contains("request-pending")) {
     target.classList.add("pickup-highlight");
@@ -96,11 +98,13 @@ function setElevatorToFloor(elevatorId, floor) {
     setTimeout(() => target.classList.remove("pickup-highlight"), 2000);
   }
 
+  // Drop highlight
   if (!elevatorData.awaitingInput && elevatorData.lastWaitingFloor !== floor) {
     target.classList.add("drop-purple");
     setTimeout(() => target.classList.remove("drop-purple"), 2000);
   }
 }
+
 
 function pollElevators() {
   setInterval(() => {
@@ -108,12 +112,13 @@ function pollElevators() {
       .then(res => res.json())
       .then(data => {
         ["A", "B"].forEach(id => {
-          let state = data[`elevator${id}`];
-          if (!state) return;
+          const state = data[`elevator${id}`];
+          const elData = elevators[id];
+          if (!state || !elData.element) return;
 
-          const elevator = elevators[id];
-          elevator.currentFloor = state.floor;
-          elevator.inMaintenance = state.inMaintenance;
+          const prevFloor = elData.currentFloor;
+          elData.currentFloor = state.floor;
+          elData.inMaintenance = state.inMaintenance;
 
           setElevatorToFloor(id, state.floor);
 
@@ -121,39 +126,61 @@ function pollElevators() {
           const btn = document.getElementById(`goBtn${id}`);
           const toggle = document.getElementById(`maintToggle${id}`);
 
-          // Enable destination input when elevator is waiting (once)
-          if (state.waiting && !elevator.awaitingInput && !state.inMaintenance) {
+          // Enable controls only if elevator is waiting and not in maintenance
+          if (state.waiting && !elData.awaitingInput && !state.inMaintenance) {
             input.disabled = false;
             btn.disabled = false;
-            elevator.awaitingInput = true;
-
-            // Auto-disable after 10 seconds
-            setTimeout(() => {
-              input.disabled = true;
-              btn.disabled = true;
-              input.value = "";
-              elevator.awaitingInput = false;
-            }, 10000);
-          }
-
-          // Reflect maintenance toggle state
-          if (toggle) toggle.checked = !state.inMaintenance;
-
-          // Disable controls during maintenance
-          if (state.inMaintenance) {
+            elData.awaitingInput = true;
+            clearTimeout(elData.inputTimeout);
+            elData.inputTimeout = setTimeout(() => {
             input.disabled = true;
             btn.disabled = true;
-            elevator.awaitingInput = false;
+            elData.awaitingInput = false;
+            input.value = "";
+
+  // Notify backend that timeout expired
+            fetch(`${backendURL}/timeout?elevator=${id}`);
+            }, 8000);
+
+
           }
 
-          elevator.element.style.opacity = state.inMaintenance ? "0.3" : "1";
+          // Reflect maintenance state
+          if (toggle) toggle.checked = !state.inMaintenance;
+          elData.element.style.opacity = state.inMaintenance ? "0.3" : "1";
+          input.disabled = state.inMaintenance;
+          btn.disabled = state.inMaintenance;
+
+          // 💡 Door animation logic: Only when elevator *just* arrived and is waiting
+          if (state.waiting && elData.previousFloor !== state.floor) {
+            // Make sure doors are closed first
+            elData.element.classList.remove("open");
+
+            // Clear old timer
+            clearTimeout(elData.doorTimer);
+
+            // ⏳ Wait 2 seconds after stopping, then open doors
+            elData.doorTimer = setTimeout(() => {
+              elData.element.classList.add("open");
+
+              // ⏳ Close after 4 more seconds
+              setTimeout(() => {
+                elData.element.classList.remove("open");
+              }, 3000);
+            }, 2000);
+          }
+
+          elData.previousFloor = state.floor;
         });
+
+        const statusPanel = document.getElementById("elevatorStatus");
+        if (statusPanel) {
+          statusPanel.innerText = `Elevator A: Floor ${data.elevatorA.floor} | Elevator B: Floor ${data.elevatorB.floor}`;
+        }
       });
   }, 1000);
 }
 
-
-// Maintenance toggle
 function setupMaintenanceToggles() {
   const ctrlDiv = document.getElementById("maintenanceControls");
   ctrlDiv.innerHTML = `<h3>Maintenance Mode</h3>`;
@@ -170,7 +197,7 @@ function setupMaintenanceToggles() {
 
 function toggleMaintenance(id) {
   const checked = document.getElementById(`maintToggle${id}`).checked;
-  const mode = checked ? "off" : "on"; // inverse because checked=true means active (not maintenance)
+  const mode = checked ? "off" : "on";
   fetch(`${backendURL}/maintenance?elevator=${id}&mode=${mode}`)
     .then(() => console.log(`Elevator ${id} maintenance ${mode}`));
 }

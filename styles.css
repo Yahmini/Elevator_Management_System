@@ -5,22 +5,27 @@ body {
   align-items: center;
   margin: 0;
   padding: 0;
-  background: linear-gradient(to bottom, #eef2f3, #81c7f1);
+  background: linear-gradient(to bottom, #dfe9f3, #ffffff);
   min-height: 100vh;
 }
 
 h1 {
   margin-top: 20px;
   color: #2c3e50;
+  text-shadow: 1px 1px 2px #aaa;
 }
 
 #setup {
   margin-top: 20px;
   margin-bottom: 10px;
+  background-color: #ffffff;
+  padding: 15px;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 input, button {
-  padding: 6px 10px;
+  padding: 8px 12px;
   font-size: 14px;
   border: 1px solid #888;
   border-radius: 4px;
@@ -31,46 +36,56 @@ button {
   background-color: #3498db;
   color: white;
   cursor: pointer;
-  transition: background-color 0.3s ease;
+  transition: background-color 0.3s ease, transform 0.2s ease;
 }
 
 button:hover {
   background-color: #2980b9;
+  transform: translateY(-1px);
 }
 
 #buildingContainer {
   position: relative;
   margin-top: 20px;
-  border: 2px solid #2c3e50;
+  border: 6px solid #37474f;
   width: 300px;
-  background-color: white;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  border-radius: 8px;
+  background: linear-gradient(to bottom, #cfd8dc, #b0bec5);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.4);
+  border-radius: 4px;
   overflow: hidden;
+  outline: 10px solid #263238;
 }
 
 .floor {
   height: 60px;
   display: flex;
-  border-top: 1px solid #ccc;
-  background-color: #f1f1f1;
+  border-top: 2px solid #90a4ae;
+  background: linear-gradient(to right, #eceff1, #f5f5f5);
   position: relative;
   transition: background-color 0.5s;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .lift-shaft {
   width: 60px;
   height: 100%;
   position: relative;
-  border-right: 1px solid #999;
+  border-right: 2px solid #607d8b;
+  background: repeating-linear-gradient(
+    45deg,
+    #b0bec5,
+    #b0bec5 10px,
+    #90a4ae 10px,
+    #90a4ae 20px
+  );
 }
 
 .shaft-A {
-  background-color: #e0f7fa;
+  background-color: #e3f2fd;
 }
 
 .shaft-B {
-  background-color: #fff3e0;
+  background-color: #fff8e1;
 }
 
 .floor-controls {
@@ -86,32 +101,39 @@ button:hover {
   color: #333;
 }
 
-/* Elevators */
 .elevator {
   width: 40px;
   height: 40px;
   position: absolute;
-  border-radius: 6px;
-  box-shadow: 0 0 6px rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  box-shadow: inset 0 0 6px #000, 0 2px 6px rgba(0, 0, 0, 0.4);
   transition: top 1.5s ease-in-out;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: bold;
+  font-size: 18px;
+  color: white;
+  border: 2px solid white;
+  font-family: 'Courier New', Courier, monospace;
+  text-shadow: 1px 1px 2px #000;
 }
 
 .elevator-A {
-  background-color: #4CAF50;
+  background: linear-gradient(to bottom, #4caf50, #2e7d32);
   left: 10px;
 }
 
 .elevator-B {
-  background-color: #2196F3;
+  background: linear-gradient(to bottom, #2196f3, #1565c0);
   left: 60px;
 }
 
-/* Grayed elevator in maintenance mode */
 .elevator.maintenance {
   opacity: 0.3;
+  filter: grayscale(80%);
 }
 
-/* Pickup and Drop Effects */
 .floor.pickup-highlight {
   background-color: #ffeeba !important;
 }
@@ -125,27 +147,30 @@ button:hover {
   transition: background-color 0.5s ease;
 }
 
-/* Pending button */
 .request-pending {
   background-color: orange !important;
   color: white;
 }
 
-/* Lift Control Panel */
 #liftControls {
-  position: absolute;
+  position: fixed;
   top: 100px;
   right: 30px;
-  width: 240px;
+  width: 260px;
   padding: 15px;
   background-color: #ffffff;
   border: 2px solid #2c3e50;
   border-radius: 10px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.2);
   text-align: center;
+  z-index: 10;
+  transition: transform 0.3s ease;
 }
 
-/* Control input states */
+#liftControls:hover {
+  transform: scale(1.02);
+}
+
 #liftControls input:disabled,
 #liftControls button:disabled {
   background-color: #f0f0f0;
@@ -168,16 +193,18 @@ button:hover {
   background-color: #2980b9;
 }
 
-/* Maintenance Controls Section */
 #maintenanceControls {
-  margin-top: 20px;
+  position: fixed;
+  top: 20px;
+  left: 20px;
   padding: 15px;
   background: #ffffff;
   border: 2px solid #2c3e50;
   border-radius: 8px;
-  width: 250px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  width: 240px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   text-align: left;
+  z-index: 10;
 }
 
 #maintenanceControls h3 {
@@ -200,7 +227,6 @@ button:hover {
   cursor: pointer;
 }
 
-/* Responsive Design */
 @media (max-width: 500px) {
   #liftControls {
     position: static;
@@ -218,6 +244,64 @@ button:hover {
   }
 
   #maintenanceControls {
+    position: static;
     width: 90%;
+    margin: 10px auto;
   }
 }
+.elevator-door {
+  position: absolute;
+  width: 50%;
+  height: 100%;
+  top: 0;
+  background-color: #eceff1;
+  z-index: 1;
+  transition: transform 0.1s ease;
+  border-radius: 0 4px 4px 0;
+}
+
+.elevator-door.left {
+  left: 0;
+  border-right: 1px solid #b0bec5;
+  border-radius: 4px 0 0 4px;
+}
+
+.elevator-door.right {
+  right: 0;
+  border-left: 1px solid #b0bec5;
+  border-radius: 0 4px 4px 0;
+}
+
+
+
+.elevator .elevator-door {
+  position: absolute;
+  width: 50%;
+  height: 100%;
+  top: 0;
+  background-color: #eceff1;
+  z-index: 1;
+  /* transition: transform 4s ease; */
+}
+
+.elevator .elevator-door.left {
+  left: 0;
+  border-right: 1px solid #b0bec5;
+}
+
+.elevator .elevator-door.right {
+  right: 0;
+  border-left: 1px solid #b0bec5;
+}
+
+.elevator.open .elevator-door.left {
+  transform: translateX(-100%);
+}
+
+.elevator.open .elevator-door.right {
+  transform: translateX(100%);
+}
+
+
+
+

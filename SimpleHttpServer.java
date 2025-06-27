@@ -21,42 +21,25 @@ public class SimpleHttpServer {
     public void start() throws IOException {
         HttpServer server = HttpServer.create(new InetSocketAddress(8085), 0);
 
-        // 🚀 Handle pickup requests
         server.createContext("/pickup", exchange -> {
             Map<String, String> params = queryParams(exchange.getRequestURI().getQuery());
             int floor = Integer.parseInt(params.getOrDefault("floor", "-1"));
 
             if (floor >= 0) {
-                boolean aActive = !elevatorA.isInMaintenance();
-                boolean bActive = !elevatorB.isInMaintenance();
-
-                Elevatorr chosen = null;
-
-                if (aActive && bActive) {
-                    int distA = Math.abs(elevatorA.getCurrentFloor() - floor);
-                    int distB = Math.abs(elevatorB.getCurrentFloor() - floor);
-                    chosen = distA <= distB ? elevatorA : elevatorB;
-                } else if (aActive) {
-                    chosen = elevatorA;
-                } else if (bActive) {
-                    chosen = elevatorB;
-                }
-
+                Elevatorr chosen = chooseElevator(floor);
                 if (chosen != null) {
                     chosen.addPickupRequest(floor);
                     System.out.println("Pickup assigned to Elevator " + (chosen == elevatorA ? "A" : "B"));
                     respond(exchange, "Pickup assigned.");
                 } else {
-                    globalPickupRequests.add(floor); // queue it globally
-                    System.out.println("No active elevators. Request saved globally.");
-                    respond(exchange, "All elevators in maintenance. Request queued.");
+                    globalPickupRequests.add(floor);
+                    respond(exchange, "No available elevators. Request queued.");
                 }
             } else {
                 respond(exchange, "Invalid floor.");
             }
         });
 
-        // 🚀 Handle destination assignments
         server.createContext("/destination", exchange -> {
             Map<String, String> params = queryParams(exchange.getRequestURI().getQuery());
             int floor = Integer.parseInt(params.getOrDefault("floor", "-1"));
@@ -73,11 +56,10 @@ public class SimpleHttpServer {
             }
         });
 
-        // 🚀 Maintenance Mode Toggle
         server.createContext("/maintenance", exchange -> {
             Map<String, String> params = queryParams(exchange.getRequestURI().getQuery());
             String elevatorId = params.get("elevator");
-            String mode = params.get("mode"); // "on" or "off"
+            String mode = params.get("mode");
 
             if (elevatorId == null || mode == null) {
                 respond(exchange, "Missing parameters.");
@@ -88,16 +70,15 @@ public class SimpleHttpServer {
 
             if ("A".equalsIgnoreCase(elevatorId)) {
                 elevatorA.setInMaintenance(on);
-                respond(exchange, "Elevator A maintenance mode: " + mode.toUpperCase());
+                respond(exchange, "Elevator A maintenance: " + mode.toUpperCase());
             } else if ("B".equalsIgnoreCase(elevatorId)) {
                 elevatorB.setInMaintenance(on);
-                respond(exchange, "Elevator B maintenance mode: " + mode.toUpperCase());
+                respond(exchange, "Elevator B maintenance: " + mode.toUpperCase());
             } else {
                 respond(exchange, "Invalid elevator ID.");
             }
         });
 
-        // 🚀 Elevator Status
         server.createContext("/status", exchange -> {
             String responseJson = "{ " +
                     "\"elevatorA\": { \"floor\": " + elevatorA.getCurrentFloor() +
@@ -109,18 +90,38 @@ public class SimpleHttpServer {
             respond(exchange, responseJson);
         });
 
-        // Timeout handler (optional)
-        server.createContext("/timeout", exchange -> {
-            Map<String, String> params = queryParams(exchange.getRequestURI().getQuery());
-            int floor = Integer.parseInt(params.getOrDefault("floor", "-1"));
-            System.out.println("Timeout received for floor: " + floor);
-            respond(exchange, "Timeout recorded.");
-        });
-
-        server.setExecutor(null); // use default executor
+        server.setExecutor(null);
         server.start();
         System.out.println("✅ Server started at http://localhost:8085/");
     }
+    private Elevatorr chooseElevator(int floor) {
+    boolean aActive = !elevatorA.isInMaintenance();
+    boolean bActive = !elevatorB.isInMaintenance();
+
+    if (!aActive && !bActive) return null;
+    if (aActive && !bActive) return elevatorA;
+    if (!aActive && bActive) return elevatorB;
+
+    int aTasks = elevatorA.getTotalRequests();
+    int bTasks = elevatorB.getTotalRequests();
+    int aDist = Math.abs(elevatorA.getCurrentFloor() - floor);
+    int bDist = Math.abs(elevatorB.getCurrentFloor() - floor);
+
+    boolean aOnWay = elevatorA.isMovingToward(floor);
+    boolean bOnWay = elevatorB.isMovingToward(floor);
+
+    // 1. Elevator already on the way takes it
+    if (aOnWay && !bOnWay) return elevatorA;
+    if (!aOnWay && bOnWay) return elevatorB;
+
+    // 2. If both are on the way or both not on the way, pick less busy
+    if (aTasks < bTasks) return elevatorA;
+    if (bTasks < aTasks) return elevatorB;
+
+    // 3. If same load, pick closer
+    return aDist <= bDist ? elevatorA : elevatorB;
+}
+
 
     private void respond(HttpExchange exchange, String response) throws IOException {
         exchange.getResponseHeaders().add("Access-Control-Allow-Origin", "*");

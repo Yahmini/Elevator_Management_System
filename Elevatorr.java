@@ -3,23 +3,31 @@ import java.util.*;
 public class Elevatorr implements Runnable {
     private final String name;
     private boolean inMaintenance = false;
-
     private int currentFloor = 0;
     private boolean goingUp = true;
     private boolean waitingForDestination = false;
     private final int maxFloor;
-
     private final TreeSet<Integer> pickupRequests = new TreeSet<>();
     private final TreeSet<Integer> destinationRequests = new TreeSet<>();
     private final List<Integer> globalPickupRequests;
-
-    private static final int THRESHOLD_DISTANCE = 10;
 
     public Elevatorr(String name, int maxFloor, List<Integer> globalPickupRequests) {
         this.name = name;
         this.maxFloor = maxFloor;
         this.globalPickupRequests = globalPickupRequests;
     }
+    public synchronized boolean isMovingToward(int floor) {
+        if (pickupRequests.isEmpty() && destinationRequests.isEmpty()) return false;
+    
+        if (goingUp && floor >= currentFloor) return true;
+        if (!goingUp && floor <= currentFloor) return true;
+    
+        return false;
+    }
+    public synchronized int getTotalRequests() {
+        return pickupRequests.size() + destinationRequests.size();
+    }
+        
 
     public synchronized void addPickupRequest(int floor) {
         if (!inMaintenance && floor >= 0 && floor <= maxFloor) {
@@ -29,12 +37,13 @@ public class Elevatorr implements Runnable {
     }
 
     public synchronized void addDestinationRequest(int floor) {
-        if (!inMaintenance && floor >= 0 && floor <= maxFloor) {
-            destinationRequests.add(floor);
-            waitingForDestination = false;
-            notifyAll();
-        }
+    if (!inMaintenance && floor >= 0 && floor <= maxFloor) {
+        destinationRequests.add(floor);
+        waitingForDestination = false; // clear the block
+        notifyAll(); // 💡 crucial to unblock thread
     }
+}
+
 
     public synchronized int getCurrentFloor() {
         return currentFloor;
@@ -50,9 +59,7 @@ public class Elevatorr implements Runnable {
 
     public synchronized void setInMaintenance(boolean inMaintenance) {
         this.inMaintenance = inMaintenance;
-        if (!inMaintenance) {
-            notifyAll(); // Resume thread if it's re-enabled
-        }
+        if (!inMaintenance) notifyAll();
     }
 
     private synchronized boolean hasRequests() {
@@ -79,7 +86,7 @@ public class Elevatorr implements Runnable {
 
         if (stopped) {
             try {
-                wait(3000); // pause at the floor for 3 seconds
+                wait(3000);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
@@ -104,94 +111,91 @@ public class Elevatorr implements Runnable {
     }
 
     public void run() {
-        while (true) {
-            try {
-                synchronized (this) {
-                    while (inMaintenance) {
-                        wait(); // Suspended while in maintenance
-                    }
+    while (true) {
+        try {
+            synchronized (this) {
+                while (inMaintenance) wait();
 
-                    if (!hasRequests()) {
-                        claimNearbyPickup();
-                    }
+                if (!hasRequests()) claimNearbyPickup();
 
-                    while (!hasRequests()) {
-                        wait(); // nothing to do
-                    }
+                while (!hasRequests()) wait();
 
-                    if (shouldStopAtCurrentFloor()) {
-                        processStop();
+                if (shouldStopAtCurrentFloor()) {
+                    processStop();
 
-                        if (waitingForDestination) {
-                            try {
-                                wait(10000); // wait for destination input
-                            } catch (InterruptedException e) {
-                                Thread.currentThread().interrupt();
-                            } finally {
-                                waitingForDestination = false;
-                            }
+                    if (waitingForDestination) {
+                        System.out.println("Elevator " + name + " waiting for destination at floor " + currentFloor);
+
+                        long startTime = System.currentTimeMillis();
+
+                        while (waitingForDestination && System.currentTimeMillis() - startTime < 8000) {
+                            wait(1000); // wait in 1 sec intervals, respond early if destination is added
                         }
-                    }
 
-                    Integer nextFloor = getNextFloor();
-                    if (nextFloor != null) {
-                        goingUp = nextFloor > currentFloor;
-
-                        while (currentFloor != nextFloor) {
-                            if (inMaintenance) break;
-
-                            currentFloor += goingUp ? 1 : -1;
-                            System.out.println("Elevator " + name + " moving... Floor: " + currentFloor);
-
-                            if (shouldStopAtCurrentFloor()) {
-                                processStop();
-                                if (waitingForDestination) {
-                                    try {
-                                        wait(10000);
-                                    } catch (InterruptedException e) {
-                                        Thread.currentThread().interrupt();
-                                    } finally {
-                                        waitingForDestination = false;
-                                    }
-                                    break;
-                                }
-                            }
-
-                            wait(1000); // simulate time per floor
-                        }
+                        // Either timeout or input received
+                        waitingForDestination = false;
+                        System.out.println("Elevator " + name + " resumes after destination wait or timeout.");
                     }
                 }
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
+
+                // ✅ Block completely before moving if waitingForDestination is true
+                while (waitingForDestination) {
+                    wait(1000); // pause and re-check every second
+                }
+
+                Integer nextFloor = getNextFloor();
+                if (nextFloor != null) {
+                    goingUp = nextFloor > currentFloor;
+
+                    while (currentFloor != nextFloor) {
+                        if (inMaintenance || waitingForDestination) break;
+
+                        currentFloor += goingUp ? 1 : -1;
+                        System.out.println("Elevator " + name + " moving to floor: " + currentFloor);
+
+                        if (shouldStopAtCurrentFloor()) {
+                            processStop();
+
+                            if (waitingForDestination) {
+                                long startTime = System.currentTimeMillis();
+                                while (waitingForDestination && System.currentTimeMillis() - startTime < 8000) {
+                                    wait(1000);
+                                }
+                                waitingForDestination = false;
+                                break;
+                            }
+                        }
+
+                        wait(1000);
+                    }
+                }
             }
-        }
-    }
-
-    private synchronized Integer getNextFloor() {
-        TreeSet<Integer> allRequests = new TreeSet<>();
-        allRequests.addAll(pickupRequests);
-        allRequests.addAll(destinationRequests);
-
-        // Priority requests within threshold
-        TreeSet<Integer> priorityRequests = new TreeSet<>();
-        for (Integer floor : allRequests) {
-            if (Math.abs(floor - currentFloor) <= THRESHOLD_DISTANCE) {
-                priorityRequests.add(floor);
-            }
-        }
-
-        TreeSet<Integer> targetSet = priorityRequests.isEmpty() ? allRequests : priorityRequests;
-
-        if (goingUp) {
-            Integer higher = targetSet.ceiling(currentFloor + 1);
-            if (higher != null) return higher;
-            return targetSet.floor(currentFloor - 1);
-        } else {
-            Integer lower = targetSet.floor(currentFloor - 1);
-            if (lower != null) return lower;
-            return targetSet.ceiling(currentFloor + 1);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         }
     }
 }
 
 
+    private synchronized Integer getNextFloor() {
+        TreeSet<Integer> all = new TreeSet<>();
+        all.addAll(pickupRequests);
+        all.addAll(destinationRequests);
+        if (all.isEmpty()) return null;
+
+        TreeSet<Integer> priority = new TreeSet<>();
+        for (int floor : all) {
+            if (Math.abs(floor - currentFloor) <= 10) priority.add(floor);
+        }
+
+        TreeSet<Integer> target = !priority.isEmpty() ? priority : all;
+
+        if (goingUp) {
+            Integer higher = target.ceiling(currentFloor + 1);
+            return (higher != null) ? higher : target.floor(currentFloor - 1);
+        } else {
+            Integer lower = target.floor(currentFloor - 1);
+            return (lower != null) ? lower : target.ceiling(currentFloor + 1);
+        }
+    }
+}
