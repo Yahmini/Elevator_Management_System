@@ -132,15 +132,14 @@ public class Elevatorr implements Runnable {
                             wait(1000); // wait in 1 sec intervals, respond early if destination is added
                         }
 
-                        // Either timeout or input received
                         waitingForDestination = false;
                         System.out.println("Elevator " + name + " resumes after destination wait or timeout.");
                     }
                 }
 
-                // ✅ Block completely before moving if waitingForDestination is true
+                
                 while (waitingForDestination) {
-                    wait(1000); // pause and re-check every second
+                    wait(1000); 
                 }
 
                 Integer nextFloor = getNextFloor();

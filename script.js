@@ -31,6 +31,11 @@ function buildBuilding() {
     controls.innerHTML = `<span class="floor-number">Floor ${i}</span><button onclick="requestPickup(${i})"></button>`;
     floor.appendChild(controls);
 
+    elevators.A.currentFloor = 0;
+    elevators.B.currentFloor = 0;
+    setElevatorToFloor("A", 0);
+    setElevatorToFloor("B", 0);
+
     container.appendChild(floor);
   }
 
@@ -90,7 +95,7 @@ function setElevatorToFloor(elevatorId, floor) {
   const floorTop = target.offsetTop;
   elevatorData.element.style.top = `${floorTop + 10}px`;
 
-  // Pickup highlight
+
   const pickupBtn = target.querySelector("button");
   if (pickupBtn?.classList.contains("request-pending")) {
     target.classList.add("pickup-highlight");
@@ -98,7 +103,6 @@ function setElevatorToFloor(elevatorId, floor) {
     setTimeout(() => target.classList.remove("pickup-highlight"), 2000);
   }
 
-  // Drop highlight
   if (!elevatorData.awaitingInput && elevatorData.lastWaitingFloor !== floor) {
     target.classList.add("drop-purple");
     setTimeout(() => target.classList.remove("drop-purple"), 2000);
@@ -126,7 +130,7 @@ function pollElevators() {
           const btn = document.getElementById(`goBtn${id}`);
           const toggle = document.getElementById(`maintToggle${id}`);
 
-          // Enable controls only if elevator is waiting and not in maintenance
+
           if (state.waiting && !elData.awaitingInput && !state.inMaintenance) {
             input.disabled = false;
             btn.disabled = false;
@@ -138,32 +142,29 @@ function pollElevators() {
             elData.awaitingInput = false;
             input.value = "";
 
-  // Notify backend that timeout expired
+
             fetch(`${backendURL}/timeout?elevator=${id}`);
             }, 8000);
 
 
           }
 
-          // Reflect maintenance state
           if (toggle) toggle.checked = !state.inMaintenance;
           elData.element.style.opacity = state.inMaintenance ? "0.3" : "1";
           input.disabled = state.inMaintenance;
           btn.disabled = state.inMaintenance;
 
-          // 💡 Door animation logic: Only when elevator *just* arrived and is waiting
+
           if (state.waiting && elData.previousFloor !== state.floor) {
-            // Make sure doors are closed first
+
             elData.element.classList.remove("open");
 
-            // Clear old timer
             clearTimeout(elData.doorTimer);
 
-            // ⏳ Wait 2 seconds after stopping, then open doors
+
             elData.doorTimer = setTimeout(() => {
               elData.element.classList.add("open");
 
-              // ⏳ Close after 4 more seconds
               setTimeout(() => {
                 elData.element.classList.remove("open");
               }, 3000);

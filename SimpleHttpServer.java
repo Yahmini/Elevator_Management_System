@@ -6,7 +6,6 @@ import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.util.*;
 import java.util.stream.Collectors;
-
 public class SimpleHttpServer {
     private final Elevatorr elevatorA;
     private final Elevatorr elevatorB;
@@ -92,7 +91,7 @@ public class SimpleHttpServer {
 
         server.setExecutor(null);
         server.start();
-        System.out.println("✅ Server started at http://localhost:8085/");
+        System.out.println("Server started at http://localhost:8085/");
     }
     private Elevatorr chooseElevator(int floor) {
     boolean aActive = !elevatorA.isInMaintenance();
@@ -110,15 +109,13 @@ public class SimpleHttpServer {
     boolean aOnWay = elevatorA.isMovingToward(floor);
     boolean bOnWay = elevatorB.isMovingToward(floor);
 
-    // 1. Elevator already on the way takes it
     if (aOnWay && !bOnWay) return elevatorA;
     if (!aOnWay && bOnWay) return elevatorB;
 
-    // 2. If both are on the way or both not on the way, pick less busy
+
     if (aTasks < bTasks) return elevatorA;
     if (bTasks < aTasks) return elevatorB;
 
-    // 3. If same load, pick closer
     return aDist <= bDist ? elevatorA : elevatorB;
 }
 
